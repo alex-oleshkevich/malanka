@@ -3,7 +3,7 @@
 WebSocket channels for ASGI
 
 ![PyPI](https://img.shields.io/pypi/v/malanka)
-![GitHub Workflow Status](https://img.shields.io/github/workflow/status/alex-oleshkevich/malanka/Python%20package)
+![GitHub Workflow Status](https://img.shields.io/github/workflow/status/alex-oleshkevich/malanka/Lint)
 ![GitHub](https://img.shields.io/github/license/alex-oleshkevich/malanka)
 ![Libraries.io dependency status for latest release](https://img.shields.io/librariesio/release/pypi/malanka)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/malanka)
