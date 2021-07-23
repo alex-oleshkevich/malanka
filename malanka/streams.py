@@ -2,6 +2,7 @@ import aioredis
 import async_timeout
 import asyncio
 import typing as t
+from contextlib import asynccontextmanager
 
 STOPWORD = None
 
@@ -13,10 +14,7 @@ class Stream(t.Protocol):
     async def publish(self, channel: str, data: t.Any) -> None:
         ...
 
-    async def subscribe(self, channel: str) -> None:
-        ...
-
-    async def unsubscribe(self) -> None:
+    async def subscribe(self, channel: str) -> t.AsyncIterator[None]:
         ...
 
 
@@ -47,8 +45,13 @@ class RedisStream:
     async def publish(self, channel: str, data: t.Any) -> None:
         await self.client.publish(channel, data)
 
-    async def subscribe(self, channel: str) -> None:
-        await self.pubsub.subscribe(channel)
+    @asynccontextmanager
+    async def subscribe(self, channel: str) -> t.AsyncIterator[None]:
+        try:
+            await self.pubsub.subscribe(channel)
+            yield
+        finally:
+            await self.pubsub.unsubscribe()
 
     async def unsubscribe(self) -> None:
         await self.pubsub.unsubscribe()

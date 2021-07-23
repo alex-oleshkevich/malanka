@@ -9,30 +9,28 @@ from malanka.streams import Stream
 
 
 class Socket:
+    stream: Stream
     channel_name: str
-    event_stream: Stream
+    websocket: WebSocket
     encoding: t.Optional[str] = None
 
     def __init__(self, scope: Scope, receive: Receive, send: Send) -> None:
         assert scope['type'] == 'websocket'
+
         self.scope = scope
         self.receive = receive
         self.send = send
 
     async def dispatch(self) -> None:
-        assert self.event_stream, 'No event stream defined.'
-        try:
-            await self.event_stream.subscribe(self.get_channel_name())
+        assert self.stream, 'No event stream defined.'
 
-            ws = WebSocket(self.scope, self.receive, self.send)
-            await self.connected(ws)
-
+        self.websocket = WebSocket(self.scope, self.receive, self.send)
+        async with self.stream.subscribe(self.get_channel_name()):  # type: ignore
+            await self.connected(self.websocket)
             await run_until_first_complete(
-                (self._receive_from_client, dict(ws=ws)),
-                (self._receive_from_channel, dict(ws=ws)),
+                (self._receive_from_client, dict(ws=self.websocket)),
+                (self._receive_from_channel, dict(ws=self.websocket)),
             )
-        finally:
-            await self.event_stream.unsubscribe()
 
     async def connected(self, ws: WebSocket) -> None:
         """Called on successful connection."""
@@ -70,7 +68,10 @@ class Socket:
 
     async def broadcast(self, data: t.Any) -> None:
         """Send message to all channel members including myself."""
-        await self.event_stream.publish(self.get_channel_name(), data)
+        await self.stream.publish(self.get_channel_name(), data)
+
+    def get_sender(self) -> str:
+        return str(id(self))
 
     def get_channel_name(self) -> str:
         assert self.channel_name, 'Channel name is not set.'
@@ -85,7 +86,7 @@ class Socket:
             'Inner' + cls.__name__,
             (cls,),
             dict(
-                event_stream=stream or cls.event_stream,
+                stream=stream or cls.stream,
                 channel_name=channel_name or cls.channel_name,
             ),
         )
@@ -108,13 +109,13 @@ class Socket:
             await self.disconnected(ws, close_code)
 
     async def _receive_from_channel(self, ws: WebSocket) -> None:
-        async for message in self.event_stream.stream():
+        async for data in self.stream.stream():
             if self.encoding == 'text':
-                await ws.send_text(message)
+                await ws.send_text(data)
             elif self.encoding == 'bytes':
-                await ws.send_bytes(message)
+                await ws.send_bytes(data)
             elif self.encoding == 'json':
-                await ws.send_json(message)
+                await ws.send_json(data)
 
     def __await__(self) -> t.Any:
         return self.dispatch().__await__()
