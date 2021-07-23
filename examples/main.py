@@ -6,7 +6,8 @@ from starlette.responses import HTMLResponse
 from starlette.routing import Route, WebSocketRoute
 from starlette.websockets import WebSocket
 
-from malanka.channels import TextChannel
+from malanka.channels import TextSocket
+from malanka.streams import RedisStream
 
 
 def index_view(request):
@@ -21,14 +22,17 @@ async def data_stream():
         await asyncio.sleep(1)
 
 
-class MyChannel(TextChannel):
+class MySocket(TextSocket):
+    channel_name = 'office'
+
     async def received(self, websocket: WebSocket, data: t.Any) -> None:
-        print('received "%s"' % data)
+        await self.broadcast(data)
 
 
 routes = [
     Route('/', index_view),
-    WebSocketRoute('/ws', MyChannel.as_asgi(data_stream())),
+    WebSocketRoute('/ws', MySocket.as_asgi(RedisStream('redis://'))),
+    WebSocketRoute('/ws2', MySocket.as_asgi(RedisStream('redis://'))),
 ]
 
 app = Starlette(debug=True, routes=routes)

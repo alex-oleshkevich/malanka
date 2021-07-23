@@ -5,41 +5,57 @@
     <script src="//unpkg.com/alpinejs"></script>
 </head>
 <body class="bg-gray-50">
-<div class="max-w-2xl mx-auto space-y-5 p-6">
-    <div class="border border-gray-200 p-3 bg-white shadow h-64 overflow-y-scroll" id="messages">
+<div class="flex space-x-10 mx-auto container">
+    <div class="space-y-5 p-6 flex-1">
+        <div class="border border-gray-200 p-3 bg-white shadow h-64 overflow-y-scroll" id="messages">
+        </div>
+        <div class="flex space-x-2">
+            <input type="text" class="flex-1 rounded border border-gray-300 px-2 py-1" id="text"/>
+            <button class="rounded px-2 py-1 bg-blue-600 text-white" id="submit">Send</button>
+        </div>
     </div>
-    <div class="flex space-x-2">
-        <input type="text" class="flex-1 rounded border border-gray-300 px-2 py-1" id="text"/>
-        <button class="rounded px-2 py-1 bg-blue-600 text-white" id="submit">Send</button>
+
+    <div class="space-y-5 p-6 flex-1">
+        <div class="border border-gray-200 p-3 bg-white shadow h-64 overflow-y-scroll" id="messages2">
+        </div>
+        <div class="flex space-x-2">
+            <input type="text" class="flex-1 rounded border border-gray-300 px-2 py-1" id="text2"/>
+            <button class="rounded px-2 py-1 bg-blue-600 text-white" id="submit2">Send</button>
+        </div>
     </div>
 </div>
 <script>
-    let ws = new WebSocket(`ws://${location.host}/ws`);
-    ws.onopen = function (e) {
-        console.log('ws connected', e);
-    };
-    ws.onclose = function (e) {
-        console.log('ws closed', e);
-    };
-    ws.onerror = function (e) {
-        console.log('ws error', e);
-    };
-    ws.onmessage = function (e) {
-        appendMessage(e.data);
-    };
+    function setup(url, inputId, buttonId, messagesId) {
+        let ws = new WebSocket(`ws://${location.host}/${url}`);
+        ws.onopen = function (e) {
+            console.log('ws connected', e);
+        };
+        ws.onclose = function (e) {
+            console.log('ws closed', e);
+        };
+        ws.onerror = function (e) {
+            console.log('ws error', e);
+        };
+        ws.onmessage = function (e) {
+            appendMessage(e.data);
+        };
 
-    let messages = document.getElementById('text');
-    let submit = document.getElementById('submit');
-    submit.addEventListener('click', () => {
-        appendMessage(messages.value);
-        ws.send(messages.value);
-    });
+        let messages = document.getElementById(inputId);
+        let submit = document.getElementById(buttonId);
+        submit.addEventListener('click', () => {
+            appendMessage(messages.value);
+            ws.send(messages.value);
+        });
 
-    function appendMessage(msg) {
-        let el = document.createElement('div');
-        el.innerText = msg;
-        document.getElementById('messages').appendChild(el);
+        function appendMessage(msg) {
+            let el = document.createElement('div');
+            el.innerText = msg;
+            document.getElementById(messagesId).appendChild(el);
+        }
     }
+
+    setup('ws', 'text', 'submit', 'messages');
+    setup('ws2', 'text2', 'submit2', 'messages2');
 </script>
 </body>
 </html>

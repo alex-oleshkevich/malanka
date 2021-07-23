@@ -2,32 +2,37 @@ import json
 import typing as t
 from starlette import status
 from starlette.concurrency import run_until_first_complete
+from starlette.types import Receive, Scope, Send
 from starlette.websockets import WebSocket
 
+from malanka.streams import Stream
 
-class Channel:
+
+class Socket:
+    channel_name: str
+    event_stream: Stream
     encoding: t.Optional[str] = None
-    event_stream: t.Optional[t.AsyncIterator] = None
 
-    def __init__(self, scope, receive, send):
+    def __init__(self, scope: Scope, receive: Receive, send: Send) -> None:
         assert scope['type'] == 'websocket'
         self.scope = scope
         self.receive = receive
         self.send = send
 
-    @classmethod
-    def as_asgi(cls, stream: t.AsyncIterator) -> t.Callable:
-        cls.event_stream = stream
-        return cls
-
     async def dispatch(self) -> None:
-        websocket = WebSocket(self.scope, self.receive, self.send)
-        await self.connected(websocket)
+        assert self.event_stream, 'No event stream defined.'
+        try:
+            await self.event_stream.subscribe(self.get_channel_name())
 
-        await run_until_first_complete(
-            (self._receive_from_client, dict(ws=websocket)),
-            (self._receive_from_channel, dict(ws=websocket)),
-        )
+            ws = WebSocket(self.scope, self.receive, self.send)
+            await self.connected(ws)
+
+            await run_until_first_complete(
+                (self._receive_from_client, dict(ws=ws)),
+                (self._receive_from_channel, dict(ws=ws)),
+            )
+        finally:
+            await self.event_stream.unsubscribe()
 
     async def connected(self, ws: WebSocket) -> None:
         """Called on successful connection."""
@@ -39,18 +44,18 @@ class Channel:
     async def received(self, websocket: WebSocket, data: t.Any) -> None:
         """Called when a message from client has been received."""
 
-    async def decode(self, ws: WebSocket, message: t.Mapping) -> t.Any:
+    async def decode(self, ws: WebSocket, data: t.Mapping) -> t.Any:
         if self.encoding == 'text':
-            if 'text' not in message:
+            if 'text' not in data:
                 await ws.close(status.WS_1003_UNSUPPORTED_DATA)
                 raise RuntimeError("Expected text websocket messages, but got bytes.")
-            return message['text']
+            return data['text']
         elif self.encoding == 'bytes':
-            if 'bytes' not in message:
+            if 'bytes' not in data:
                 await ws.close(status.WS_1003_UNSUPPORTED_DATA)
                 raise RuntimeError("Expected bytes websocket messages, but got text.")
         elif self.encoding == 'json':
-            text = message['text'] if message.get('text') is not None else message['bytes'].decode('utf-8')
+            text = data['text'] if data.get('text') is not None else data['bytes'].decode('utf-8')
             try:
                 return self.load_json(text)
             except json.decoder.JSONDecodeError:
@@ -58,10 +63,29 @@ class Channel:
                 raise RuntimeError('Malformed JSON data received.')
 
         assert self.encoding is None, f"Unsupported 'encoding' attribute {self.encoding}"
-        return message["text"] if message.get("text") else message["bytes"]
+        return data["text"] if data.get("text") else data["bytes"]
+
+    async def broadcast(self, data: t.Any) -> None:
+        """Send message to all channel members including myself."""
+        await self.event_stream.publish(self.get_channel_name(), data)
+
+    def get_channel_name(self) -> str:
+        assert self.channel_name, 'Channel name is not set.'
+        return self.channel_name
 
     def load_json(self, raw_data: str) -> t.Any:
         return json.loads(raw_data)
+
+    @classmethod
+    def as_asgi(cls, stream: Stream, channel_name: str = None) -> t.Callable:
+        return type(
+            'Inner' + cls.__name__,
+            (cls,),
+            dict(
+                event_stream=stream or cls.event_stream,
+                channel_name=channel_name or cls.channel_name,
+            ),
+        )
 
     async def _receive_from_client(self, ws: WebSocket) -> None:
         close_code = status.WS_1000_NORMAL_CLOSURE
@@ -81,9 +105,7 @@ class Channel:
             await self.disconnected(ws, close_code)
 
     async def _receive_from_channel(self, ws: WebSocket) -> None:
-        assert self.event_stream, 'No event stream defined.'
-
-        async for message in self.event_stream:
+        async for message in self.event_stream.stream():
             if self.encoding == 'text':
                 await ws.send_text(message)
             elif self.encoding == 'bytes':
@@ -95,9 +117,9 @@ class Channel:
         return self.dispatch().__await__()
 
 
-class TextChannel(Channel):
+class TextSocket(Socket):
     encoding = 'text'
 
 
-class JSONChannel(Channel):
+class JSONSocket(Socket):
     encoding = 'json'
