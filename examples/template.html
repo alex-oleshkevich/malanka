@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css" rel="stylesheet">
+    <script src="//unpkg.com/alpinejs" defer></script>
+</head>
+<body class="bg-gray-50" x-data="{messages:[]}">
+<div class="max-w-2xl mx-auto space-y-5 p-6">
+    <div class="border border-gray-200 p-3 bg-white shadow h-64 overflow-y-scroll">
+
+    </div>
+    <div class="flex space-x-2">
+        <input type="text" class="flex-1 rounded border border-gray-300 px-2 py-1"/>
+        <button class="rounded px-2 py-1 bg-blue-600 text-white" @click="send('test')">Send</button>
+    </div>
+</div>
+<script>
+    let ws = new WebSocket(`ws://${location.host}/ws`);
+    ws.onopen = function (e) {
+        console.log('ws connected', e);
+    };
+    ws.onclose = function (e) {
+        console.log('ws closed', e);
+    };
+    ws.onerror = function (e) {
+        console.log('ws error', e);
+    };
+    ws.onmessage = function (e) {
+        console.log('got message', e);
+    };
+
+    function send(msg) {
+        ws.send(msg);
+    }
+</script>
+</body>
+</html>

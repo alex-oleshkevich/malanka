@@ -29,6 +29,8 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "^3.6.2"
+starlette = "^0.16.0"
+anyio = "^3.3.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.4"
