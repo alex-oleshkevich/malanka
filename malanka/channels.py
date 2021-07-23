@@ -62,7 +62,10 @@ class Socket:
                 await ws.close(status.WS_1003_UNSUPPORTED_DATA)
                 raise RuntimeError('Malformed JSON data received.')
 
-        assert self.encoding is None, f"Unsupported 'encoding' attribute {self.encoding}"
+        return self.decode_fallback(ws, data)
+
+    def decode_fallback(self, ws: WebSocket, data: t.Mapping) -> t.Any:
+        """Handle unsupported encoding."""
         return data["text"] if data.get("text") else data["bytes"]
 
     async def broadcast(self, data: t.Any) -> None:
@@ -119,6 +122,10 @@ class Socket:
 
 class TextSocket(Socket):
     encoding = 'text'
+
+
+class BinarySocket(Socket):
+    encoding = 'bytes'
 
 
 class JSONSocket(Socket):

@@ -1,4 +1,3 @@
-import asyncio
 import os.path
 import typing as t
 from starlette.applications import Starlette
@@ -14,12 +13,6 @@ def index_view(request):
     template_file = os.path.join(os.path.dirname(__file__), 'template.html')
     with open(template_file, 'r') as f:
         return HTMLResponse(f.read())
-
-
-async def data_stream():
-    while True:
-        yield 'message'
-        await asyncio.sleep(1)
 
 
 class MySocket(TextSocket):
