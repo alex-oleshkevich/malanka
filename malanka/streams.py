@@ -4,8 +4,6 @@ import asyncio
 import typing as t
 from contextlib import asynccontextmanager
 
-STOPWORD = None
-
 
 class Stream(t.Protocol):
     def stream(self) -> t.AsyncIterator:
@@ -34,10 +32,7 @@ class RedisStream:
                 async with async_timeout.timeout(1):
                     message = await self.pubsub.get_message(ignore_subscribe_messages=True)
                     if message is not None:
-                        if message["data"] == STOPWORD:
-                            break
-                        else:
-                            yield message['data'].decode('utf-8')
+                        yield message['data'].decode('utf-8')
                     await asyncio.sleep(0.01)
             except asyncio.TimeoutError:
                 pass
