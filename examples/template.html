@@ -2,16 +2,15 @@
 <html lang="en">
 <head>
     <link href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css" rel="stylesheet">
-    <script src="//unpkg.com/alpinejs" defer></script>
+    <script src="//unpkg.com/alpinejs"></script>
 </head>
-<body class="bg-gray-50" x-data="{messages:[]}">
+<body class="bg-gray-50">
 <div class="max-w-2xl mx-auto space-y-5 p-6">
-    <div class="border border-gray-200 p-3 bg-white shadow h-64 overflow-y-scroll">
-
+    <div class="border border-gray-200 p-3 bg-white shadow h-64 overflow-y-scroll" id="messages">
     </div>
     <div class="flex space-x-2">
-        <input type="text" class="flex-1 rounded border border-gray-300 px-2 py-1"/>
-        <button class="rounded px-2 py-1 bg-blue-600 text-white" @click="send('test')">Send</button>
+        <input type="text" class="flex-1 rounded border border-gray-300 px-2 py-1" id="text"/>
+        <button class="rounded px-2 py-1 bg-blue-600 text-white" id="submit">Send</button>
     </div>
 </div>
 <script>
@@ -26,11 +25,20 @@
         console.log('ws error', e);
     };
     ws.onmessage = function (e) {
-        console.log('got message', e);
+        appendMessage(e.data);
     };
 
-    function send(msg) {
-        ws.send(msg);
+    let messages = document.getElementById('text');
+    let submit = document.getElementById('submit');
+    submit.addEventListener('click', () => {
+        appendMessage(messages.value);
+        ws.send(messages.value);
+    });
+
+    function appendMessage(msg) {
+        let el = document.createElement('div');
+        el.innerText = msg;
+        document.getElementById('messages').appendChild(el);
     }
 </script>
 </body>

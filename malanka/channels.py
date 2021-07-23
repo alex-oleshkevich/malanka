@@ -1,4 +1,3 @@
-import asyncio
 import json
 import typing as t
 from starlette import status
@@ -8,16 +7,18 @@ from starlette.websockets import WebSocket
 
 class Channel:
     encoding: t.Optional[str] = None
+    event_stream: t.Optional[t.AsyncIterator] = None
 
     def __init__(self, scope, receive, send):
         assert scope['type'] == 'websocket'
-
         self.scope = scope
         self.receive = receive
         self.send = send
 
-    def __await__(self):
-        return self.dispatch().__await__()
+    @classmethod
+    def as_asgi(cls, stream: t.AsyncIterator) -> t.Callable:
+        cls.event_stream = stream
+        return cls
 
     async def dispatch(self) -> None:
         websocket = WebSocket(self.scope, self.receive, self.send)
@@ -80,8 +81,18 @@ class Channel:
             await self.disconnected(ws, close_code)
 
     async def _receive_from_channel(self, ws: WebSocket) -> None:
-        while True:
-            await asyncio.sleep(1)
+        assert self.event_stream, 'No event stream defined.'
+
+        async for message in self.event_stream:
+            if self.encoding == 'text':
+                await ws.send_text(message)
+            elif self.encoding == 'bytes':
+                await ws.send_bytes(message)
+            elif self.encoding == 'json':
+                await ws.send_json(message)
+
+    def __await__(self) -> t.Any:
+        return self.dispatch().__await__()
 
 
 class TextChannel(Channel):

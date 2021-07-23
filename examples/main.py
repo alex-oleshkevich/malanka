@@ -23,12 +23,12 @@ async def data_stream():
 
 class MyChannel(TextChannel):
     async def received(self, websocket: WebSocket, data: t.Any) -> None:
-        print(data)
+        print('received "%s"' % data)
 
 
 routes = [
     Route('/', index_view),
-    WebSocketRoute('/ws', MyChannel),
+    WebSocketRoute('/ws', MyChannel.as_asgi(data_stream())),
 ]
 
 app = Starlette(debug=True, routes=routes)
