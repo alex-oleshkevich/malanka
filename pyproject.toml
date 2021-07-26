@@ -10,7 +10,7 @@ repository = "https://github.com/alex-oleshkevich/malanka"
 documentation = "https://github.com/alex-oleshkevich/malanka"
 keywords = ["websocket", "channels", "real-time", "starlette", "fastapi", "asgi"]
 classifiers = [
-    "Development Status :: 1 - Planning",
+    "Development Status :: 5 - Production/Stable",
     "Environment :: Web Environment",
     "Framework :: AsyncIO",
     "Intended Audience :: Developers",
@@ -21,14 +21,13 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.6",
     "Topic :: Software Development :: Libraries :: Application Frameworks",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Typing :: Typed",
 ]
 
 [tool.poetry.dependencies]
-python = "^3.6.2"
+python = "^3.7.0"
 starlette = "^0.16.0"
 anyio = "^3.3.0"
 
