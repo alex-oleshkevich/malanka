@@ -5,8 +5,10 @@ from starlette.responses import HTMLResponse
 from starlette.routing import Route, WebSocketRoute
 from starlette.websockets import WebSocket
 
-from malanka.channels import TextSocket
-from malanka.streams import RedisStream
+from malanka.backends.postgres import PostgresBackend
+from malanka.backends.redis import RedisBackend
+from malanka.pubsub import PubSub
+from malanka.sockets import TextSocket
 
 
 def index_view(request):
@@ -22,10 +24,13 @@ class MySocket(TextSocket):
         await self.broadcast(data)
 
 
+stream = PubSub(RedisBackend('redis://'))
+# stream = PubSub(PostgresBackend('postgresql://app:app@localhost/kamai'))
+
 routes = [
     Route('/', index_view),
-    WebSocketRoute('/ws', MySocket.as_asgi(RedisStream('redis://'))),
-    WebSocketRoute('/ws2', MySocket.as_asgi(RedisStream('redis://'))),
+    WebSocketRoute('/ws', MySocket.as_asgi(stream)),
+    WebSocketRoute('/ws2', MySocket.as_asgi(stream)),
 ]
 
 app = Starlette(debug=True, routes=routes)
